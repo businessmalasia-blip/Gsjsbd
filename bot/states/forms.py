@@ -18,6 +18,7 @@ class StatusChangeForm(StatesGroup):
     ticket_id = State()
     new_status = State()
     cancellation_reason = State()
+    departure_reason = State()
 
 
 class PaymentForm(StatesGroup):

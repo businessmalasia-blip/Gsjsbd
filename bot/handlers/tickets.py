@@ -44,6 +44,8 @@ def format_ticket(ticket, lang: str) -> str:
     )
     if ticket.cancellation_reason:
         text += f"{t('ticket_cancel_reason', lang)}: {ticket.cancellation_reason}\n"
+    if ticket.departure_reason:
+        text += f"{t('ticket_departure_reason', lang)}: {ticket.departure_reason}\n"
     text += f"\n{t('ticket_created_at', lang)}: {ticket.created_at.strftime('%d.%m.%Y %H:%M')}"
     return text
 
@@ -240,6 +242,16 @@ async def process_status_change(
         await callback.answer()
         return
 
+    if new_status == TicketStatus.DEPARTED:
+        await state.update_data(ticket_id=ticket_id, new_status=new_status_str)
+        await callback.message.edit_text(
+            t("enter_departure_reason", lang),
+            reply_markup=cancel_kb(lang),
+        )
+        await state.set_state(StatusChangeForm.departure_reason)
+        await callback.answer()
+        return
+
     ticket = await update_ticket_status(session, ticket_id, new_status, operator.id)
     if ticket:
         await callback.message.edit_text(
@@ -266,6 +278,26 @@ async def process_cancellation_reason(
     if ticket:
         await message.answer(
             t("cancel_reason_done", lang, id=ticket_id, reason=ticket.cancellation_reason),
+            reply_markup=ticket_status_kb(ticket.id, ticket.status.value, lang),
+        )
+
+
+@router.message(StatusChangeForm.departure_reason)
+async def process_departure_reason(
+    message: Message, state: FSMContext, session: AsyncSession,
+    operator: Operator, lang: str
+):
+    data = await state.get_data()
+    ticket_id = data["ticket_id"]
+    new_status = TicketStatus(data["new_status"])
+    ticket = await update_ticket_status(
+        session, ticket_id, new_status, operator.id,
+        departure_reason=message.text.strip()
+    )
+    await state.clear()
+    if ticket:
+        await message.answer(
+            t("departure_reason_done", lang, id=ticket_id, reason=ticket.departure_reason),
             reply_markup=ticket_status_kb(ticket.id, ticket.status.value, lang),
         )
 

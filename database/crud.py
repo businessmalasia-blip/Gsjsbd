@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional, List, Tuple
-from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy import select, func, and_, or_, update, delete, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -146,6 +146,7 @@ async def update_ticket_status(
     new_status: TicketStatus,
     operator_id: int,
     cancellation_reason: Optional[str] = None,
+    departure_reason: Optional[str] = None,
 ) -> Optional[Ticket]:
     ticket = await get_ticket(session, ticket_id)
     if not ticket:
@@ -154,14 +155,20 @@ async def update_ticket_status(
     ticket.status = new_status
     if cancellation_reason:
         ticket.cancellation_reason = cancellation_reason
-    if new_status in (TicketStatus.PAID, TicketStatus.CANCELLED):
+    if departure_reason:
+        ticket.departure_reason = departure_reason
+    if new_status in (TicketStatus.PAID, TicketStatus.CANCELLED, TicketStatus.DEPARTED):
         ticket.closed_at = datetime.utcnow()
     await session.commit()
     await session.refresh(ticket)
+    reason_note = ""
+    if cancellation_reason:
+        reason_note = f". Причина отмены: {cancellation_reason}"
+    elif departure_reason:
+        reason_note = f". Причина ухода: {departure_reason}"
     await log_action(
         session, operator_id, ticket_id, ActionType.TICKET_STATUS_CHANGED,
-        f"Статус #{ticket_id}: {old_status.value} → {new_status.value}"
-        + (f". Причина: {cancellation_reason}" if cancellation_reason else "")
+        f"Статус #{ticket_id}: {old_status.value} → {new_status.value}{reason_note}"
     )
     return ticket
 
@@ -337,12 +344,9 @@ async def get_operator_stats(
         select(
             Operator.full_name,
             func.count(Ticket.id).label("total"),
-            func.sum(
-                func.cast(Ticket.status == TicketStatus.PAID, Integer)
-            ).label("paid"),
-            func.sum(
-                func.cast(Ticket.status == TicketStatus.CANCELLED, Integer)
-            ).label("cancelled"),
+            func.sum(case((Ticket.status == TicketStatus.PAID, 1), else_=0)).label("paid"),
+            func.sum(case((Ticket.status == TicketStatus.CANCELLED, 1), else_=0)).label("cancelled"),
+            func.sum(case((Ticket.status == TicketStatus.DEPARTED, 1), else_=0)).label("departed"),
         )
         .join(Ticket, Ticket.operator_id == Operator.id)
         .where(and_(*filters))
@@ -356,6 +360,7 @@ async def get_operator_stats(
             "total": r.total,
             "paid": r.paid or 0,
             "cancelled": r.cancelled or 0,
+            "departed": r.departed or 0,
         }
         for r in rows
     ]
@@ -393,23 +398,36 @@ async def get_cancellation_reasons_stats(
     date_to: datetime,
 ) -> List[dict]:
     result = await session.execute(
-        select(
-            Ticket.cancellation_reason,
-            func.count(Ticket.id).label("count"),
-        )
-        .where(
-            and_(
-                Ticket.created_at >= date_from,
-                Ticket.created_at <= date_to,
-                Ticket.status == TicketStatus.CANCELLED,
-                Ticket.cancellation_reason.isnot(None),
-            )
-        )
+        select(Ticket.cancellation_reason, func.count(Ticket.id).label("count"))
+        .where(and_(
+            Ticket.created_at >= date_from,
+            Ticket.created_at <= date_to,
+            Ticket.status == TicketStatus.CANCELLED,
+            Ticket.cancellation_reason.isnot(None),
+        ))
         .group_by(Ticket.cancellation_reason)
         .order_by(func.count(Ticket.id).desc())
     )
-    rows = result.all()
-    return [{"reason": r.cancellation_reason, "count": r.count} for r in rows]
+    return [{"reason": r.cancellation_reason, "count": r.count} for r in result.all()]
+
+
+async def get_departure_reasons_stats(
+    session: AsyncSession,
+    date_from: datetime,
+    date_to: datetime,
+) -> List[dict]:
+    result = await session.execute(
+        select(Ticket.departure_reason, func.count(Ticket.id).label("count"))
+        .where(and_(
+            Ticket.created_at >= date_from,
+            Ticket.created_at <= date_to,
+            Ticket.status == TicketStatus.DEPARTED,
+            Ticket.departure_reason.isnot(None),
+        ))
+        .group_by(Ticket.departure_reason)
+        .order_by(func.count(Ticket.id).desc())
+    )
+    return [{"reason": r.departure_reason, "count": r.count} for r in result.all()]
 
 
 # ─── Action Log ───────────────────────────────────────────────────────────────

@@ -31,6 +31,7 @@ def ticket_status_kb(ticket_id: int, current_status: str, lang: str = "ru") -> I
         TicketStatus.IN_PROGRESS: t("status_in_progress", lang),
         TicketStatus.PAID: t("status_paid", lang),
         TicketStatus.CANCELLED: t("status_cancelled", lang),
+        TicketStatus.DEPARTED: t("status_departed", lang),
         TicketStatus.ON_HOLD: t("status_on_hold", lang),
     }
     for status, label in statuses.items():

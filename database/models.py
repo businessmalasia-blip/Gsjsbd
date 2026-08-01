@@ -25,6 +25,7 @@ class TicketStatus(PyEnum):
     IN_PROGRESS = "in_progress"
     PAID = "paid"
     CANCELLED = "cancelled"
+    DEPARTED = "departed"
     ON_HOLD = "on_hold"
 
 
@@ -98,6 +99,7 @@ class Ticket(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
     cancellation_reason: Mapped[Optional[str]] = mapped_column(Text)
+    departure_reason: Mapped[Optional[str]] = mapped_column(Text)
     notes: Mapped[Optional[str]] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(

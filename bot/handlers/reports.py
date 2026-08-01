@@ -11,7 +11,7 @@ from bot.states.forms import ReportForm
 from config import settings
 from database.crud import (
     get_report_stats, get_operator_stats, get_traffic_source_stats,
-    get_cancellation_reasons_stats
+    get_cancellation_reasons_stats, get_departure_reasons_stats
 )
 from database.models import Operator, UserRole
 
@@ -114,6 +114,7 @@ async def _send_report(
         t("report_in_progress", lang, v=s.get("in_progress", 0)),
         t("report_paid_count", lang, v=s.get("paid", 0)),
         t("report_cancelled", lang, v=s.get("cancelled", 0)),
+        t("report_departed", lang, v=s.get("departed", 0)),
         t("report_on_hold", lang, v=s.get("on_hold", 0)),
         "",
         t("report_amount", lang, amount=stats["total_payment"]),
@@ -124,6 +125,12 @@ async def _send_report(
         if reasons:
             lines.append(t("cancel_reasons_title", lang))
             for r in reasons[:5]:
+                lines.append(f"  • {r['reason'][:40]}: {r['count']}")
+
+        dep_reasons = await get_departure_reasons_stats(session, date_from, date_to)
+        if dep_reasons:
+            lines.append(t("departure_reasons_title", lang))
+            for r in dep_reasons[:5]:
                 lines.append(f"  • {r['reason'][:40]}: {r['count']}")
 
     lines.append(f"\n{t('report_generated', lang, time=datetime.now().strftime('%d.%m.%Y %H:%M'))}")
