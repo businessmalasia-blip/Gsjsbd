@@ -56,6 +56,7 @@ class Operator(Base):
         Enum(UserRole), default=UserRole.OPERATOR, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    language: Mapped[str] = mapped_column(String(2), default="ru", nullable=False, server_default="ru")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -81,7 +82,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    client_name: Mapped[Optional[str]] = mapped_column(String(300))
     client_phone: Mapped[Optional[str]] = mapped_column(String(50))
     client_contact: Mapped[Optional[str]] = mapped_column(String(300))
 

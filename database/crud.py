@@ -22,18 +22,29 @@ async def get_operator_by_telegram_id(
     return result.scalar_one_or_none()
 
 
+async def update_operator_language(
+    session: AsyncSession, operator_id: int, language: str
+) -> None:
+    await session.execute(
+        update(Operator).where(Operator.id == operator_id).values(language=language)
+    )
+    await session.commit()
+
+
 async def create_operator(
     session: AsyncSession,
     telegram_id: int,
     full_name: str,
     username: Optional[str] = None,
     role: UserRole = UserRole.OPERATOR,
+    language: str = "ru",
 ) -> Operator:
     operator = Operator(
         telegram_id=telegram_id,
         full_name=full_name,
         username=username,
         role=role,
+        language=language,
     )
     session.add(operator)
     await session.commit()
@@ -93,11 +104,11 @@ async def get_or_create_traffic_source(
 async def create_ticket(
     session: AsyncSession,
     operator_id: int,
-    client_name: str,
     client_phone: Optional[str] = None,
     client_contact: Optional[str] = None,
     traffic_source_id: Optional[int] = None,
     description: Optional[str] = None,
+    client_name: Optional[str] = None,
 ) -> Ticket:
     ticket = Ticket(
         operator_id=operator_id,
@@ -112,7 +123,7 @@ async def create_ticket(
     await session.commit()
     await session.refresh(ticket)
     await log_action(session, operator_id, ticket.id, ActionType.TICKET_CREATED,
-                     f"Создано обращение #{ticket.id}: {client_name}")
+                     f"Создано обращение #{ticket.id}: {client_phone or client_contact or '—'}")
     return ticket
 
 

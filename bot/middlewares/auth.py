@@ -25,6 +25,7 @@ class AuthMiddleware(BaseMiddleware):
         if user and session:
             operator = await get_operator_by_telegram_id(session, user.id)
             data["operator"] = operator
+            data["lang"] = operator.language if operator else "ru"
             data["is_supervisor"] = operator and operator.role in (
                 UserRole.SUPERVISOR, UserRole.ADMIN
             )
