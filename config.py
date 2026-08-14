@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 
 
@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ADMIN_IDS: str = ""
     DATABASE_URL: str
     TIMEZONE: str = "Europe/Moscow"
+    EXPORT_CHAT_ID: Optional[int] = None
 
     model_config = {
         "env_file": ".env",

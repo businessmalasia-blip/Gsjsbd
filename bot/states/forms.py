@@ -6,10 +6,12 @@ class RegistrationForm(StatesGroup):
 
 
 class TicketForm(StatesGroup):
-    client_name = State()
     client_phone = State()
     client_contact = State()
     traffic_source = State()
+    model_id = State()
+    master_id = State()
+    session_duration = State()
     description = State()
     confirm = State()
 
@@ -23,6 +25,8 @@ class StatusChangeForm(StatesGroup):
 
 class PaymentForm(StatesGroup):
     ticket_id = State()
+    payment_type = State()
+    extra_time_minutes = State()
     amount = State()
     comment = State()
 
@@ -46,6 +50,14 @@ class ReportForm(StatesGroup):
 
 
 class TrafficSourceForm(StatesGroup):
+    name = State()
+
+
+class ModelForm(StatesGroup):
+    name = State()
+
+
+class MasterForm(StatesGroup):
     name = State()
 
 

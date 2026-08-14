@@ -46,6 +46,53 @@ class ActionType(PyEnum):
     TICKET_UPDATED = "ticket_updated"
 
 
+class PaymentType(PyEnum):
+    SESSION = "session"
+    CANCELLATION = "cancellation"
+    SERVICE = "service"
+    EXTRA_TIME = "extra_time"
+
+
+class ResultCategory(PyEnum):
+    POSITIVE_LEAD = "positive_lead"
+    BOOKING = "booking"
+    GENERAL_LEAD = "general_lead"
+
+
+class ClientStatus(PyEnum):
+    NEW = "new"
+    WHITE_LIST = "white_list"
+    BLACK_LIST = "black_list"
+
+
+class Model(Base):
+    """Модель (персонаж: Руби, Ника и т.д.)"""
+    __tablename__ = "models"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    tickets: Mapped[List["Ticket"]] = relationship(back_populates="model")
+
+
+class Master(Base):
+    """Мастер (человек, который проводит сеанс)"""
+    __tablename__ = "masters"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    tickets: Mapped[List["Ticket"]] = relationship(back_populates="master")
+
+
 class Operator(Base):
     __tablename__ = "operators"
 
@@ -57,7 +104,9 @@ class Operator(Base):
         Enum(UserRole), default=UserRole.OPERATOR, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    language: Mapped[str] = mapped_column(String(2), default="ru", nullable=False, server_default="ru")
+    language: Mapped[str] = mapped_column(
+        String(2), default="ru", nullable=False, server_default="ru"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -86,15 +135,19 @@ class Ticket(Base):
     client_name: Mapped[Optional[str]] = mapped_column(String(300))
     client_phone: Mapped[Optional[str]] = mapped_column(String(50))
     client_contact: Mapped[Optional[str]] = mapped_column(String(300))
+    client_status: Mapped[Optional[ClientStatus]] = mapped_column(Enum(ClientStatus))
 
     status: Mapped[TicketStatus] = mapped_column(
         Enum(TicketStatus), default=TicketStatus.NEW, nullable=False
     )
+    result_category: Mapped[Optional[ResultCategory]] = mapped_column(Enum(ResultCategory))
 
     operator_id: Mapped[int] = mapped_column(ForeignKey("operators.id"), nullable=False)
-    traffic_source_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("traffic_sources.id")
-    )
+    traffic_source_id: Mapped[Optional[int]] = mapped_column(ForeignKey("traffic_sources.id"))
+    model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("models.id"))
+    master_id: Mapped[Optional[int]] = mapped_column(ForeignKey("masters.id"))
+
+    session_duration: Mapped[Optional[int]] = mapped_column(Integer)  # minutes
 
     description: Mapped[Optional[str]] = mapped_column(Text)
     amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
@@ -111,9 +164,9 @@ class Ticket(Base):
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     operator: Mapped["Operator"] = relationship(back_populates="tickets")
-    traffic_source: Mapped[Optional["TrafficSource"]] = relationship(
-        back_populates="tickets"
-    )
+    traffic_source: Mapped[Optional["TrafficSource"]] = relationship(back_populates="tickets")
+    model: Mapped[Optional["Model"]] = relationship(back_populates="tickets")
+    master: Mapped[Optional["Master"]] = relationship(back_populates="tickets")
     payments: Mapped[List["Payment"]] = relationship(back_populates="ticket")
     action_logs: Mapped[List["ActionLog"]] = relationship(back_populates="ticket")
 
@@ -123,7 +176,11 @@ class Payment(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), nullable=False)
+    payment_type: Mapped[PaymentType] = mapped_column(
+        Enum(PaymentType), default=PaymentType.SESSION, nullable=False
+    )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    extra_time_minutes: Mapped[Optional[int]] = mapped_column(Integer)
     comment: Mapped[Optional[str]] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

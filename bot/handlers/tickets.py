@@ -8,15 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.i18n import t, status_label
 from bot.keyboards.inline import (
     ticket_status_kb, traffic_sources_kb, confirm_kb, cancel_kb,
-    list_type_kb, back_to_menu_kb
+    list_type_kb, back_to_menu_kb, models_kb, masters_kb,
+    payment_type_kb, result_category_kb
 )
 from bot.states.forms import TicketForm, StatusChangeForm, PaymentForm, SearchForm
 from database.crud import (
     create_ticket, get_ticket, update_ticket_status, add_payment,
     search_tickets, get_tickets_by_operator, get_all_traffic_sources,
-    get_or_create_traffic_source, add_to_list
+    get_or_create_traffic_source, add_to_list, get_all_models,
+    get_or_create_model, get_all_masters, get_or_create_master,
+    set_ticket_result
 )
-from database.models import Operator, TicketStatus, ListType
+from database.models import Operator, TicketStatus, ListType, PaymentType, ResultCategory
 
 router = Router()
 
@@ -26,22 +29,73 @@ LIST_NAMES = {
     "black": ("🔴", "Black List"),
 }
 
+RESULT_LABELS = {
+    "positive_lead": "result_positive_lead_label",
+    "booking": "result_booking_label",
+    "general_lead": "result_general_lead_label",
+}
+
+CLIENT_STATUS_LABELS = {
+    "new": "client_status_new",
+    "white_list": "client_status_white_list",
+    "black_list": "client_status_black_list",
+}
+
+PAYMENT_TYPE_LABELS = {
+    "session": "payment_type_session",
+    "cancellation": "payment_type_cancellation",
+    "service": "payment_type_service",
+    "extra_time": "payment_type_extra_time",
+}
+
 
 def format_ticket(ticket, lang: str) -> str:
-    payments_total = sum(p.amount for p in ticket.payments)
-    source_name = ticket.traffic_source.name if ticket.traffic_source else t("none", lang)
     none = t("none", lang)
     rub = t("rub", lang)
+    min_abbr = t("minutes_abbr", lang)
+
+    # group payments by type
+    pay_by_type: dict = {}
+    extra_mins = 0
+    for p in ticket.payments:
+        ptype = p.payment_type.value
+        pay_by_type[ptype] = pay_by_type.get(ptype, Decimal("0")) + p.amount
+        if ptype == "extra_time" and p.extra_time_minutes:
+            extra_mins += p.extra_time_minutes
+
+    model_name = ticket.model.name if ticket.model else none
+    master_name = ticket.master.name if ticket.master else none
+    source_name = ticket.traffic_source.name if ticket.traffic_source else none
+    client_status_key = CLIENT_STATUS_LABELS.get(
+        ticket.client_status.value if ticket.client_status else "new", "client_status_new"
+    )
+    duration_str = f"{ticket.session_duration} {min_abbr}" if ticket.session_duration else none
+    result_str = t(RESULT_LABELS.get(
+        ticket.result_category.value if ticket.result_category else "", "none"
+    ), lang) if ticket.result_category else none
+
     text = (
         f"📋 <b>#{ticket.id}</b>\n\n"
         f"{t('ticket_phone', lang)}: {ticket.client_phone or none}\n"
         f"{t('ticket_contact', lang)}: {ticket.client_contact or none}\n"
+        f"{t('ticket_client_status', lang)}: {t(client_status_key, lang)}\n"
         f"{t('ticket_status', lang)}: {status_label(ticket.status.value, lang)}\n"
-        f"{t('ticket_operator', lang)}: {ticket.operator.full_name}\n"
+        f"{t('ticket_result', lang)}: {result_str}\n"
+        f"{t('ticket_model', lang)}: {model_name}\n"
+        f"{t('ticket_master', lang)}: {master_name}\n"
         f"{t('ticket_source', lang)}: {source_name}\n"
-        f"{t('ticket_payments', lang)}: <b>{payments_total} {rub}</b>\n"
-        f"{t('ticket_description', lang)}: {ticket.description or none}\n"
+        f"{t('ticket_duration', lang)}: {duration_str}\n"
+        f"{t('ticket_operator', lang)}: {ticket.operator.full_name}\n"
     )
+    if pay_by_type:
+        text += "\n"
+        for ptype, amount in pay_by_type.items():
+            label = t(PAYMENT_TYPE_LABELS.get(ptype, ptype), lang)
+            text += f"  {label}: <b>{amount} {rub}</b>\n"
+        if extra_mins:
+            text += f"  {t('ticket_duration', lang)} (доп.): {extra_mins} {min_abbr}\n"
+    if ticket.description:
+        text += f"\n{t('ticket_description', lang)}: {ticket.description}\n"
     if ticket.cancellation_reason:
         text += f"{t('ticket_cancel_reason', lang)}: {ticket.cancellation_reason}\n"
     if ticket.departure_reason:
@@ -106,11 +160,12 @@ async def process_traffic_source(
     else:
         await state.update_data(traffic_source_id=int(data))
 
+    models = await get_all_models(session)
     await callback.message.edit_text(
-        t("enter_description", lang),
-        reply_markup=cancel_kb(lang),
+        t("choose_model", lang),
+        reply_markup=models_kb(models, lang),
     )
-    await state.set_state(TicketForm.description)
+    await state.set_state(TicketForm.model_id)
     await callback.answer()
 
 
@@ -120,6 +175,91 @@ async def process_new_traffic_source(
 ):
     source = await get_or_create_traffic_source(session, message.text.strip())
     await state.update_data(traffic_source_id=source.id)
+    models = await get_all_models(session)
+    await message.answer(t("choose_model", lang), reply_markup=models_kb(models, lang))
+    await state.set_state(TicketForm.model_id)
+
+
+@router.callback_query(F.data.startswith("model:"), TicketForm.model_id)
+async def process_model_selection(
+    callback: CallbackQuery, state: FSMContext, session: AsyncSession, lang: str
+):
+    data = callback.data.split(":")[1]
+    if data == "skip":
+        await state.update_data(model_id=None)
+    elif data == "new":
+        await callback.message.edit_text(t("enter_model_name", lang), reply_markup=cancel_kb(lang))
+        await callback.answer()
+        return
+    else:
+        await state.update_data(model_id=int(data))
+
+    masters = await get_all_masters(session)
+    await callback.message.edit_text(
+        t("choose_master", lang),
+        reply_markup=masters_kb(masters, lang),
+    )
+    await state.set_state(TicketForm.master_id)
+    await callback.answer()
+
+
+@router.message(TicketForm.model_id)
+async def process_new_model(
+    message: Message, state: FSMContext, session: AsyncSession, lang: str
+):
+    m = await get_or_create_model(session, message.text.strip())
+    await state.update_data(model_id=m.id)
+    masters = await get_all_masters(session)
+    await message.answer(t("choose_master", lang), reply_markup=masters_kb(masters, lang))
+    await state.set_state(TicketForm.master_id)
+
+
+@router.callback_query(F.data.startswith("master:"), TicketForm.master_id)
+async def process_master_selection(
+    callback: CallbackQuery, state: FSMContext, session: AsyncSession, lang: str
+):
+    data = callback.data.split(":")[1]
+    if data == "skip":
+        await state.update_data(master_id=None)
+    elif data == "new":
+        await callback.message.edit_text(t("enter_master_name", lang), reply_markup=cancel_kb(lang))
+        await callback.answer()
+        return
+    else:
+        await state.update_data(master_id=int(data))
+
+    await callback.message.edit_text(
+        t("enter_session_duration", lang),
+        reply_markup=cancel_kb(lang),
+    )
+    await state.set_state(TicketForm.session_duration)
+    await callback.answer()
+
+
+@router.message(TicketForm.master_id)
+async def process_new_master(
+    message: Message, state: FSMContext, session: AsyncSession, lang: str
+):
+    m = await get_or_create_master(session, message.text.strip())
+    await state.update_data(master_id=m.id)
+    await message.answer(t("enter_session_duration", lang), reply_markup=cancel_kb(lang))
+    await state.set_state(TicketForm.session_duration)
+
+
+@router.message(TicketForm.session_duration)
+async def process_session_duration(message: Message, state: FSMContext, lang: str):
+    text = message.text.strip()
+    if text == "/skip":
+        await state.update_data(session_duration=None)
+    else:
+        try:
+            mins = int(text)
+            if mins <= 0:
+                raise ValueError
+            await state.update_data(session_duration=mins)
+        except ValueError:
+            await message.answer(t("invalid_duration", lang))
+            return
     await message.answer(t("enter_description", lang), reply_markup=cancel_kb(lang))
     await state.set_state(TicketForm.description)
 
@@ -154,6 +294,9 @@ async def confirm_ticket_creation(
         client_contact=data.get("client_contact"),
         traffic_source_id=data.get("traffic_source_id"),
         description=data.get("description"),
+        model_id=data.get("model_id"),
+        master_id=data.get("master_id"),
+        session_duration=data.get("session_duration"),
     )
     await state.clear()
     await callback.message.edit_text(
@@ -203,7 +346,10 @@ async def my_tickets(
 
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     builder = InlineKeyboardBuilder()
-    icons = {"new": "🆕", "in_progress": "🔄", "paid": "✅", "cancelled": "❌", "on_hold": "⏸"}
+    icons = {
+        "new": "🆕", "in_progress": "🔄", "paid": "✅",
+        "cancelled": "❌", "on_hold": "⏸", "departed": "🚪"
+    }
     for ticket in tickets:
         icon = icons.get(ticket.status.value, "📋")
         label = ticket.client_phone or ticket.client_contact or f"#{ticket.id}"
@@ -302,6 +448,37 @@ async def process_departure_reason(
         )
 
 
+# ─── Set Result ───────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("result:"))
+async def start_set_result(callback: CallbackQuery, lang: str):
+    ticket_id = int(callback.data.split(":")[1])
+    await callback.message.edit_text(
+        t("choose_result", lang, id=ticket_id),
+        reply_markup=result_category_kb(ticket_id, lang),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("setresult:"))
+async def confirm_set_result(
+    callback: CallbackQuery, session: AsyncSession, operator: Operator, lang: str
+):
+    parts = callback.data.split(":")
+    ticket_id = int(parts[1])
+    result_value = parts[2]
+    result = ResultCategory(result_value)
+    ticket = await set_ticket_result(session, ticket_id, result, operator.id)
+    if ticket:
+        result_label = t(RESULT_LABELS.get(result_value, "none"), lang)
+        await callback.message.edit_text(
+            t("result_set", lang, result=result_label),
+            parse_mode="HTML",
+            reply_markup=ticket_status_kb(ticket.id, ticket.status.value, lang),
+        )
+    await callback.answer()
+
+
 # ─── Payment ──────────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data.startswith("payment:"))
@@ -309,11 +486,54 @@ async def start_payment(callback: CallbackQuery, state: FSMContext, lang: str):
     ticket_id = int(callback.data.split(":")[1])
     await state.update_data(ticket_id=ticket_id)
     await callback.message.edit_text(
-        t("enter_amount", lang, id=ticket_id),
+        t("choose_payment_type", lang, id=ticket_id),
+        reply_markup=payment_type_kb(ticket_id, lang),
+    )
+    await state.set_state(PaymentForm.payment_type)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("paytype:"), PaymentForm.payment_type)
+async def process_payment_type(
+    callback: CallbackQuery, state: FSMContext, lang: str
+):
+    parts = callback.data.split(":")
+    ticket_id = int(parts[1])
+    ptype = parts[2]
+    await state.update_data(payment_type=ptype)
+
+    if ptype == "extra_time":
+        await callback.message.edit_text(
+            t("enter_extra_minutes", lang),
+            reply_markup=cancel_kb(lang),
+        )
+        await state.set_state(PaymentForm.extra_time_minutes)
+    else:
+        await state.update_data(extra_time_minutes=None)
+        await callback.message.edit_text(
+            t("enter_amount", lang, id=ticket_id),
+            reply_markup=cancel_kb(lang),
+        )
+        await state.set_state(PaymentForm.amount)
+    await callback.answer()
+
+
+@router.message(PaymentForm.extra_time_minutes)
+async def process_extra_minutes(message: Message, state: FSMContext, lang: str):
+    try:
+        mins = int(message.text.strip())
+        if mins <= 0:
+            raise ValueError
+    except ValueError:
+        await message.answer(t("invalid_minutes", lang))
+        return
+    data = await state.get_data()
+    await state.update_data(extra_time_minutes=mins)
+    await message.answer(
+        t("enter_amount", lang, id=data["ticket_id"]),
         reply_markup=cancel_kb(lang),
     )
     await state.set_state(PaymentForm.amount)
-    await callback.answer()
 
 
 @router.message(PaymentForm.amount)
@@ -338,21 +558,25 @@ async def process_payment_comment(
     data = await state.get_data()
     comment_text = message.text.strip()
     comment = None if comment_text == "/skip" else comment_text
+    ptype = PaymentType(data.get("payment_type", "session"))
     payment = await add_payment(
         session,
         ticket_id=data["ticket_id"],
         operator_id=operator.id,
         amount=Decimal(data["amount"]),
+        payment_type=ptype,
+        extra_time_minutes=data.get("extra_time_minutes"),
         comment=comment,
     )
     ticket = await get_ticket(session, data["ticket_id"])
     await state.clear()
     none = t("none", lang)
+    type_label = t(PAYMENT_TYPE_LABELS.get(ptype.value, ptype.value), lang)
     await message.answer(
         t("payment_added", lang,
           id=data["ticket_id"],
           amount=payment.amount,
-          comment=comment or none),
+          comment=f"[{type_label}] {comment or none}"),
         parse_mode="HTML",
         reply_markup=ticket_status_kb(ticket.id, ticket.status.value, lang) if ticket else back_to_menu_kb(lang),
     )
@@ -387,7 +611,10 @@ async def process_search(
 
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     builder = InlineKeyboardBuilder()
-    icons = {"new": "🆕", "in_progress": "🔄", "paid": "✅", "cancelled": "❌", "on_hold": "⏸"}
+    icons = {
+        "new": "🆕", "in_progress": "🔄", "paid": "✅",
+        "cancelled": "❌", "on_hold": "⏸", "departed": "🚪"
+    }
     for ticket in tickets:
         icon = icons.get(ticket.status.value, "📋")
         label = ticket.client_phone or ticket.client_contact or f"#{ticket.id}"

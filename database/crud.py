@@ -7,7 +7,8 @@ from sqlalchemy.orm import selectinload
 
 from database.models import (
     Operator, Ticket, Payment, ClientList, ActionLog, TrafficSource,
-    UserRole, TicketStatus, ListType, ActionType
+    Model, Master, UserRole, TicketStatus, ListType, ActionType,
+    PaymentType, ResultCategory, ClientStatus
 )
 
 
@@ -70,6 +71,56 @@ async def update_operator_role(
     await session.commit()
 
 
+# ─── Models ───────────────────────────────────────────────────────────────────
+
+async def get_all_models(session: AsyncSession) -> List[Model]:
+    result = await session.execute(
+        select(Model).where(Model.is_active == True).order_by(Model.name)
+    )
+    return list(result.scalars().all())
+
+
+async def create_model(session: AsyncSession, name: str) -> Model:
+    model = Model(name=name)
+    session.add(model)
+    await session.commit()
+    await session.refresh(model)
+    return model
+
+
+async def get_or_create_model(session: AsyncSession, name: str) -> Model:
+    result = await session.execute(select(Model).where(Model.name == name))
+    m = result.scalar_one_or_none()
+    if not m:
+        m = await create_model(session, name)
+    return m
+
+
+# ─── Masters ──────────────────────────────────────────────────────────────────
+
+async def get_all_masters(session: AsyncSession) -> List[Master]:
+    result = await session.execute(
+        select(Master).where(Master.is_active == True).order_by(Master.name)
+    )
+    return list(result.scalars().all())
+
+
+async def create_master(session: AsyncSession, name: str) -> Master:
+    master = Master(name=name)
+    session.add(master)
+    await session.commit()
+    await session.refresh(master)
+    return master
+
+
+async def get_or_create_master(session: AsyncSession, name: str) -> Master:
+    result = await session.execute(select(Master).where(Master.name == name))
+    m = result.scalar_one_or_none()
+    if not m:
+        m = await create_master(session, name)
+    return m
+
+
 # ─── Traffic Sources ───────────────────────────────────────────────────────────
 
 async def get_all_traffic_sources(session: AsyncSession) -> List[TrafficSource]:
@@ -101,6 +152,33 @@ async def get_or_create_traffic_source(
 
 # ─── Tickets ──────────────────────────────────────────────────────────────────
 
+async def _detect_client_status(
+    session: AsyncSession, phone: Optional[str], contact: Optional[str]
+) -> ClientStatus:
+    """Auto-detect client status by checking client lists."""
+    if not phone and not contact:
+        return ClientStatus.NEW
+    filters = []
+    if phone:
+        filters.append(ClientList.client_phone == phone)
+    if contact:
+        filters.append(ClientList.client_contact == contact)
+    result = await session.execute(
+        select(ClientList).where(or_(*filters)).order_by(ClientList.created_at.desc())
+    )
+    entries = list(result.scalars().all())
+    if not entries:
+        return ClientStatus.NEW
+    # black list takes priority
+    for e in entries:
+        if e.list_type.value == "black":
+            return ClientStatus.BLACK_LIST
+    for e in entries:
+        if e.list_type.value == "white":
+            return ClientStatus.WHITE_LIST
+    return ClientStatus.NEW
+
+
 async def create_ticket(
     session: AsyncSession,
     operator_id: int,
@@ -109,14 +187,22 @@ async def create_ticket(
     traffic_source_id: Optional[int] = None,
     description: Optional[str] = None,
     client_name: Optional[str] = None,
+    model_id: Optional[int] = None,
+    master_id: Optional[int] = None,
+    session_duration: Optional[int] = None,
 ) -> Ticket:
+    client_status = await _detect_client_status(session, client_phone, client_contact)
     ticket = Ticket(
         operator_id=operator_id,
         client_name=client_name,
         client_phone=client_phone,
         client_contact=client_contact,
+        client_status=client_status,
         traffic_source_id=traffic_source_id,
         description=description,
+        model_id=model_id,
+        master_id=master_id,
+        session_duration=session_duration,
         status=TicketStatus.NEW,
     )
     session.add(ticket)
@@ -133,6 +219,8 @@ async def get_ticket(session: AsyncSession, ticket_id: int) -> Optional[Ticket]:
         .options(
             selectinload(Ticket.operator),
             selectinload(Ticket.traffic_source),
+            selectinload(Ticket.model),
+            selectinload(Ticket.master),
             selectinload(Ticket.payments),
         )
         .where(Ticket.id == ticket_id)
@@ -173,17 +261,40 @@ async def update_ticket_status(
     return ticket
 
 
+async def set_ticket_result(
+    session: AsyncSession,
+    ticket_id: int,
+    result_category: ResultCategory,
+    operator_id: int,
+) -> Optional[Ticket]:
+    ticket = await get_ticket(session, ticket_id)
+    if not ticket:
+        return None
+    ticket.result_category = result_category
+    await session.commit()
+    await session.refresh(ticket)
+    await log_action(
+        session, operator_id, ticket_id, ActionType.TICKET_UPDATED,
+        f"Результат #{ticket_id}: {result_category.value}"
+    )
+    return ticket
+
+
 async def add_payment(
     session: AsyncSession,
     ticket_id: int,
     operator_id: int,
     amount: Decimal,
+    payment_type: PaymentType = PaymentType.SESSION,
+    extra_time_minutes: Optional[int] = None,
     comment: Optional[str] = None,
 ) -> Payment:
     payment = Payment(
         ticket_id=ticket_id,
         operator_id=operator_id,
+        payment_type=payment_type,
         amount=amount,
+        extra_time_minutes=extra_time_minutes,
         comment=comment,
     )
     session.add(payment)
@@ -191,12 +302,10 @@ async def add_payment(
     if ticket:
         current = ticket.amount or Decimal("0")
         ticket.amount = current + amount
-        if ticket.status == TicketStatus.NEW or ticket.status == TicketStatus.IN_PROGRESS:
-            ticket.status = TicketStatus.PAID
     await session.commit()
     await session.refresh(payment)
     await log_action(session, operator_id, ticket_id, ActionType.PAYMENT_ADDED,
-                     f"Оплата по обращению #{ticket_id}: {amount} руб.")
+                     f"Оплата ({payment_type.value}) по обращению #{ticket_id}: {amount}")
     return payment
 
 
@@ -236,6 +345,24 @@ async def get_tickets_by_operator(
         .where(Ticket.operator_id == operator_id)
         .order_by(Ticket.created_at.desc())
         .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def get_export_tickets(
+    session: AsyncSession, date_from: datetime, date_to: datetime
+) -> List[Ticket]:
+    result = await session.execute(
+        select(Ticket)
+        .options(
+            selectinload(Ticket.operator),
+            selectinload(Ticket.traffic_source),
+            selectinload(Ticket.model),
+            selectinload(Ticket.master),
+            selectinload(Ticket.payments),
+        )
+        .where(and_(Ticket.created_at >= date_from, Ticket.created_at < date_to))
+        .order_by(Ticket.created_at)
     )
     return list(result.scalars().all())
 

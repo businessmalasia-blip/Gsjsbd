@@ -1,12 +1,16 @@
 import asyncio
 import logging
 
+import pytz
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from bot.handlers import start, tickets, lists, reports, logs, admin
+from bot.handlers.export import run_daily_export
 from bot.middlewares.auth import AuthMiddleware
 from config import settings
 from database.connection import create_tables, async_session_factory
@@ -49,8 +53,24 @@ async def main():
     dp.include_router(logs.router)
     dp.include_router(admin.router)
 
+    # Daily export scheduler — fires at 10:00 Moscow time every day
+    tz = pytz.timezone(settings.TIMEZONE)
+    scheduler = AsyncIOScheduler(timezone=tz)
+    scheduler.add_job(
+        run_daily_export,
+        CronTrigger(hour=10, minute=0, timezone=tz),
+        args=[bot],
+        id="daily_export",
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("Scheduler started. Daily export at 10:00 %s", settings.TIMEZONE)
+
     logger.info("Starting CRM bot...")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    try:
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    finally:
+        scheduler.shutdown()
 
 
 if __name__ == "__main__":
