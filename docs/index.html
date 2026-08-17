@@ -1,0 +1,1285 @@
+<title>инструкция по работе с crm-ботом</title>
+<style>
+  /* ── tokens ── */
+  :root {
+    --nav-bg: #0D1528;
+    --nav-text: #94A3B8;
+    --nav-active-bg: #1E3A5F;
+    --nav-active: #60A5FA;
+    --nav-section: #475569;
+    --accent: #2563EB;
+    --accent-h: #1D4ED8;
+    --accent-light: #DBEAFE;
+    --accent-light-text: #1E40AF;
+    --green: #16A34A;
+    --green-light: #DCFCE7;
+    --green-text: #14532D;
+    --yellow: #D97706;
+    --yellow-light: #FEF3C7;
+    --yellow-text: #92400E;
+    --red: #DC2626;
+    --red-light: #FEE2E2;
+    --red-text: #7F1D1D;
+    --purple: #7C3AED;
+    --purple-light: #EDE9FE;
+    --purple-text: #4C1D95;
+    --slate: #475569;
+    --slate-light: #F1F5F9;
+    --slate-text: #1E293B;
+    --bg: #F3F6FD;
+    --surface: #FFFFFF;
+    --surface2: #F8FAFC;
+    --text: #0F172A;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --step-line: #BFDBFE;
+    --chip-bg: #EFF6FF;
+    --chip-text: #1D4ED8;
+    --chip-border: #BFDBFE;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #090D1B;
+      --surface: #111827;
+      --surface2: #0F172A;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #1E293B;
+      --step-line: #1E3A5F;
+      --chip-bg: #1E3A5F;
+      --chip-text: #93C5FD;
+      --chip-border: #2563EB;
+      --accent-light: #1E3A5F;
+      --accent-light-text: #93C5FD;
+      --green-light: #052E16;
+      --green-text: #86EFAC;
+      --yellow-light: #1C1008;
+      --yellow-text: #FCD34D;
+      --red-light: #1C0505;
+      --red-text: #FCA5A5;
+      --purple-light: #1A0A3B;
+      --purple-text: #C4B5FD;
+      --slate-light: #1E293B;
+      --slate-text: #CBD5E1;
+      --shadow: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #090D1B;
+    --surface: #111827;
+    --surface2: #0F172A;
+    --text: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border: #1E293B;
+    --step-line: #1E3A5F;
+    --chip-bg: #1E3A5F;
+    --chip-text: #93C5FD;
+    --chip-border: #2563EB;
+    --accent-light: #1E3A5F;
+    --accent-light-text: #93C5FD;
+    --green-light: #052E16;
+    --green-text: #86EFAC;
+    --yellow-light: #1C1008;
+    --yellow-text: #FCD34D;
+    --red-light: #1C0505;
+    --red-text: #FCA5A5;
+    --purple-light: #1A0A3B;
+    --purple-text: #C4B5FD;
+    --slate-light: #1E293B;
+    --slate-text: #CBD5E1;
+    --shadow: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── sidebar ── */
+  nav {
+    width: 260px;
+    min-width: 260px;
+    background: var(--nav-bg);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 24px;
+    scrollbar-width: thin;
+    scrollbar-color: #1E3A5F transparent;
+  }
+  nav::-webkit-scrollbar { width: 4px; }
+  nav::-webkit-scrollbar-thumb { background: #1E3A5F; border-radius: 4px; }
+
+  .nav-logo {
+    padding: 24px 20px 18px;
+    border-bottom: 1px solid #1E293B;
+    margin-bottom: 8px;
+  }
+  .nav-logo-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #F1F5F9;
+    line-height: 1.2;
+  }
+  .nav-logo-sub {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 3px;
+  }
+
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--nav-section);
+    padding: 16px 20px 5px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 20px;
+    color: var(--nav-text);
+    text-decoration: none;
+    font-size: 13.5px;
+    border-radius: 0;
+    transition: background .15s, color .15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,.05);
+    color: #E2E8F0;
+  }
+  .nav-item.active {
+    background: var(--nav-active-bg);
+    color: var(--nav-active);
+    border-left-color: var(--nav-active);
+    font-weight: 600;
+  }
+  .nav-item .icon { font-size: 15px; opacity: .8; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    background: #1E3A5F;
+    color: #60A5FA;
+    padding: 1px 6px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+
+  /* ── main ── */
+  main {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 56px 80px;
+    max-width: 860px;
+  }
+
+  .doc-header {
+    margin-bottom: 48px;
+  }
+  .doc-eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .doc-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .doc-lead {
+    margin-top: 12px;
+    font-size: 16px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    max-width: 640px;
+  }
+
+  /* ── sections ── */
+  .section {
+    margin-bottom: 56px;
+    scroll-margin-top: 24px;
+  }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .s-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .section-title .s-num {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .section-desc {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-size: 14.5px;
+  }
+
+  /* ── card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  /* ── steps ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    position: relative;
+    padding-bottom: 20px;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 32px;
+  }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .step-line {
+    width: 2px;
+    flex: 1;
+    background: var(--step-line);
+    margin-top: 4px;
+  }
+  .step:last-child .step-line { display: none; }
+  .step-content {
+    padding-top: 5px;
+    padding-bottom: 4px;
+  }
+  .step-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .step-desc {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+
+  /* ── button chips ── */
+  .btn-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--chip-bg);
+    color: var(--chip-text);
+    border: 1px solid var(--chip-border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .btn-chip.green { background: var(--green-light); color: var(--green-text); border-color: #86EFAC; }
+  .btn-chip.red { background: var(--red-light); color: var(--red-text); border-color: #FCA5A5; }
+  .btn-chip.yellow { background: var(--yellow-light); color: var(--yellow-text); border-color: #FCD34D; }
+  .btn-chip.purple { background: var(--purple-light); color: var(--purple-text); border-color: #C4B5FD; }
+  .btn-chip.slate { background: var(--slate-light); color: var(--slate-text); border-color: var(--border); }
+
+  /* ── status badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 20px;
+    padding: 3px 10px 3px 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .badge.blue { background: var(--accent-light); color: var(--accent-light-text); }
+  .badge.green { background: var(--green-light); color: var(--green-text); }
+  .badge.yellow { background: var(--yellow-light); color: var(--yellow-text); }
+  .badge.red { background: var(--red-light); color: var(--red-text); }
+  .badge.purple { background: var(--purple-light); color: var(--purple-text); }
+  .badge.slate { background: var(--slate-light); color: var(--slate-text); }
+
+  /* ── table ── */
+  .tbl-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  th {
+    background: var(--surface2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* ── tip / note ── */
+  .tip {
+    display: flex;
+    gap: 12px;
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--accent-light-text);
+    line-height: 1.55;
+  }
+  .tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .warn {
+    display: flex;
+    gap: 12px;
+    background: var(--yellow-light);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--yellow-text);
+    line-height: 1.55;
+  }
+
+  /* ── role tag ── */
+  .role-sup {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    background: var(--purple-light);
+    color: var(--purple-text);
+    border-radius: 4px;
+    padding: 1px 6px;
+    text-transform: uppercase;
+  }
+
+  /* ── columns list ── */
+  .col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .col-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .col-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── inline ── */
+  strong { font-weight: 600; color: var(--text); }
+  p { margin-bottom: 12px; }
+  ul, ol { padding-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; font-size: 14px; color: var(--text); }
+  li:last-child { margin-bottom: 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── role cards ── */
+  .role-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .role-card-icon { font-size: 24px; margin-bottom: 8px; }
+  .role-card-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .role-card-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ── payments grid ── */
+  .pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pay-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 13.5px;
+  }
+  .pay-card-title { font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .pay-card-desc { font-size: 12.5px; color: var(--text-muted); }
+
+  /* ── excel columns ── */
+  .xlsx-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .xlsx-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .xlsx-n {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 900px) {
+    nav { display: none; }
+    main { padding: 28px 20px 60px; }
+    .role-cards { grid-template-columns: 1fr; }
+    .pay-grid { grid-template-columns: 1fr; }
+    .col-grid { grid-template-columns: 1fr; }
+    .xlsx-list { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .xlsx-list { grid-template-columns: 1fr; }
+  }
+
+  /* scroll-spy highlight handled by JS */
+</style>
+
+<nav id="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-title">crm-бот</div>
+    <div class="nav-logo-sub">инструкция оператора</div>
+  </div>
+
+  <div class="nav-section-label">начало работы</div>
+  <a class="nav-item" href="#s-start"><span class="icon">🚀</span> регистрация</a>
+  <a class="nav-item" href="#s-menu"><span class="icon">📋</span> главное меню</a>
+  <a class="nav-item" href="#s-roles"><span class="icon">👥</span> роли пользователей</a>
+
+  <div class="nav-section-label">обращения</div>
+  <a class="nav-item" href="#s-create"><span class="icon">➕</span> создание обращения</a>
+  <a class="nav-item" href="#s-card"><span class="icon">🗂️</span> карточка обращения</a>
+  <a class="nav-item" href="#s-status"><span class="icon">🔄</span> статусы</a>
+  <a class="nav-item" href="#s-result"><span class="icon">🎯</span> результат</a>
+  <a class="nav-item" href="#s-payment"><span class="icon">💳</span> оплата</a>
+  <a class="nav-item" href="#s-search"><span class="icon">🔍</span> поиск</a>
+  <a class="nav-item" href="#s-mine"><span class="icon">📌</span> мои обращения</a>
+
+  <div class="nav-section-label">клиенты и аналитика</div>
+  <a class="nav-item" href="#s-clients"><span class="icon">📓</span> списки клиентов</a>
+  <a class="nav-item" href="#s-reports"><span class="icon">📊</span> отчёты</a>
+  <a class="nav-item" href="#s-ops"><span class="icon">📈</span> аналитика операторов <span class="nav-badge">sv</span></a>
+  <a class="nav-item" href="#s-traffic"><span class="icon">📡</span> аналитика трафика <span class="nav-badge">sv</span></a>
+  <a class="nav-item" href="#s-log"><span class="icon">📜</span> журнал действий <span class="nav-badge">sv</span></a>
+
+  <div class="nav-section-label">управление</div>
+  <a class="nav-item" href="#s-admin"><span class="icon">⚙️</span> управление системой <span class="nav-badge">sv</span></a>
+  <a class="nav-item" href="#s-lang"><span class="icon">🌐</span> язык интерфейса</a>
+  <a class="nav-item" href="#s-export"><span class="icon">📤</span> ежедневная выгрузка</a>
+</nav>
+
+<main>
+  <div class="doc-header">
+    <div class="doc-eyebrow">полная инструкция</div>
+    <h1 class="doc-title">crm-бот чат-центра</h1>
+    <p class="doc-lead">
+      здесь описаны все возможности бота: от регистрации до настройки системы.
+      разделы с пометкой <span class="role-sup">sv</span> доступны только супервайзерам и администраторам.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════ 1. РЕГИСТРАЦИЯ -->
+  <section class="section" id="s-start">
+    <h2 class="section-title">
+      <span class="s-icon">🚀</span> регистрация и первый запуск
+    </h2>
+    <p class="section-desc">при первом обращении к боту система автоматически создаёт учётную запись оператора.</p>
+
+    <div class="card">
+      <div class="card-title">как начать</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">найдите бота в telegram</div>
+            <div class="step-desc">откройте telegram и перейдите по ссылке, которую прислал администратор.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">нажмите <span class="btn-chip">▶ start</span></div>
+            <div class="step-desc">бот запросит у Вас имя и фамилию из профиля telegram. если данные не указаны — попросит ввести их вручную.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">учётная запись создана</div>
+            <div class="step-desc">вы получите роль «оператор». для получения роли «супервайзер» обратитесь к администратору.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">💡</span>
+      <span>если бот не отвечает — возможно, администратор ещё не добавил Вас в список разрешённых пользователей. уточните у него.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 2. ГЛАВНОЕ МЕНЮ -->
+  <section class="section" id="s-menu">
+    <h2 class="section-title">
+      <span class="s-icon">📋</span> главное меню
+    </h2>
+    <p class="section-desc">главное меню открывается командой <strong>/start</strong> или кнопкой «главное меню» из любого экрана.</p>
+
+    <div class="card">
+      <div class="card-title">кнопки меню</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>кнопка</th><th>что делает</th><th>доступ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="btn-chip">➕ новое обращение</span></td><td>создаёт обращение клиента</td><td>все</td></tr>
+            <tr><td><span class="btn-chip">🔍 поиск</span></td><td>ищет обращения по номеру телефона или id</td><td>все</td></tr>
+            <tr><td><span class="btn-chip">📌 мои обращения</span></td><td>показывает обращения, созданные оператором</td><td>все</td></tr>
+            <tr><td><span class="btn-chip">📓 списки клиентов</span></td><td>зелёный, белый и чёрный списки</td><td>все</td></tr>
+            <tr><td><span class="btn-chip">📊 отчёты</span></td><td>статистика за выбранный период</td><td>все</td></tr>
+            <tr><td><span class="btn-chip">📈 аналитика операторов</span></td><td>сравнение операторов</td><td><span class="role-sup">sv</span></td></tr>
+            <tr><td><span class="btn-chip">📡 аналитика трафика</span></td><td>распределение по источникам</td><td><span class="role-sup">sv</span></td></tr>
+            <tr><td><span class="btn-chip">📜 журнал действий</span></td><td>история всех изменений в системе</td><td><span class="role-sup">sv</span></td></tr>
+            <tr><td><span class="btn-chip">⚙️ управление системой</span></td><td>настройки: операторы, модели, мастера, источники</td><td><span class="role-sup">sv</span></td></tr>
+            <tr><td><span class="btn-chip">🌐 язык</span></td><td>переключает интерфейс ru / en</td><td>все</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 3. РОЛИ -->
+  <section class="section" id="s-roles">
+    <h2 class="section-title">
+      <span class="s-icon">👥</span> роли пользователей
+    </h2>
+    <p class="section-desc">в системе три уровня доступа. каждый следующий включает все возможности предыдущего.</p>
+
+    <div class="role-cards">
+      <div class="role-card">
+        <div class="role-card-icon">👤</div>
+        <div class="role-card-name">оператор</div>
+        <div class="role-card-desc">создаёт и ведёт обращения, работает с клиентами, видит отчёты по своей работе.</div>
+      </div>
+      <div class="role-card" style="border-color: var(--purple-light);">
+        <div class="role-card-icon">🛡️</div>
+        <div class="role-card-name">супервайзер</div>
+        <div class="role-card-desc">видит всю аналитику, журнал действий, управляет справочниками системы и ролями операторов.</div>
+      </div>
+      <div class="role-card" style="border-color: var(--yellow-light);">
+        <div class="role-card-icon">👑</div>
+        <div class="role-card-name">администратор</div>
+        <div class="role-card-desc">полный доступ. назначается при первом запуске через переменную окружения <code>ADMIN_IDS</code>.</div>
+      </div>
+    </div>
+
+    <div class="tip" style="margin-top: 16px;">
+      <span class="tip-icon">ℹ️</span>
+      <span>сменить роль оператора может только супервайзер или администратор через «управление системой → смена роли».</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 4. СОЗДАНИЕ -->
+  <section class="section" id="s-create">
+    <h2 class="section-title">
+      <span class="s-icon">➕</span> создание обращения
+    </h2>
+    <p class="section-desc">нажмите «➕ новое обращение» в главном меню. бот последовательно запросит у Вас данные.</p>
+
+    <div class="card">
+      <div class="card-title">8 шагов создания</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">номер телефона клиента</div>
+            <div class="step-desc">введите номер в любом формате, например <strong>+79001234567</strong> или <strong>89001234567</strong>. при совпадении с базой система автоматически определит статус клиента.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">контакт (имя или ник)</div>
+            <div class="step-desc">имя в мессенджере, никнейм или любое другое обозначение клиента.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">источник трафика</div>
+            <div class="step-desc">выберите из списка или нажмите «➕ новый источник» для добавления нового.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">персонаж (модель)</div>
+            <div class="step-desc">выберите персонажа из списка, введите нового или нажмите «пропустить», если неизвестно.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">5</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">мастер (исполнитель)</div>
+            <div class="step-desc">выберите мастера, который проводит сеанс, введите нового или пропустите.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">6</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">длительность сеанса</div>
+            <div class="step-desc">введите число минут (например, <strong>60</strong>) или нажмите «пропустить».</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">7</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">описание / комментарий</div>
+            <div class="step-desc">дополнительные заметки об обращении. можно пропустить.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">8</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">подтверждение</div>
+            <div class="step-desc">бот покажет сводку всех данных. нажмите «✅ подтвердить» для сохранения или «✏️ изменить» для редактирования.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">💡</span>
+      <span>на любом шаге можно нажать «отмена», чтобы вернуться в меню без сохранения.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 5. КАРТОЧКА -->
+  <section class="section" id="s-card">
+    <h2 class="section-title">
+      <span class="s-icon">🗂️</span> карточка обращения
+    </h2>
+    <p class="section-desc">после создания или при открытии обращения через поиск бот показывает его полную карточку.</p>
+
+    <div class="card">
+      <div class="card-title">поля карточки</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>поле</th><th>описание</th></tr></thead>
+          <tbody>
+            <tr><td><strong>id</strong></td><td>уникальный номер обращения</td></tr>
+            <tr><td><strong>дата и время</strong></td><td>момент создания (часовой пояс системы)</td></tr>
+            <tr><td><strong>телефон</strong></td><td>номер клиента</td></tr>
+            <tr><td><strong>контакт</strong></td><td>имя или ник клиента</td></tr>
+            <tr><td><strong>статус клиента</strong></td><td>новый / белый список / чёрный список</td></tr>
+            <tr><td><strong>источник</strong></td><td>откуда пришёл клиент</td></tr>
+            <tr><td><strong>персонаж</strong></td><td>выбранная модель</td></tr>
+            <tr><td><strong>мастер</strong></td><td>исполнитель сеанса</td></tr>
+            <tr><td><strong>длительность</strong></td><td>продолжительность сеанса в минутах</td></tr>
+            <tr><td><strong>статус</strong></td><td>текущий этап обращения</td></tr>
+            <tr><td><strong>результат</strong></td><td>итоговая категория (после завершения)</td></tr>
+            <tr><td><strong>оплаты</strong></td><td>перечень всех платежей по обращению</td></tr>
+            <tr><td><strong>описание</strong></td><td>комментарий оператора</td></tr>
+            <tr><td><strong>оператор</strong></td><td>кто создал обращение</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">кнопки действий в карточке</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <span class="btn-chip">✏️ изменить статус</span>
+        <span class="btn-chip green">💳 добавить оплату</span>
+        <span class="btn-chip purple">🎯 указать результат</span>
+        <span class="btn-chip slate">🔙 назад</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 6. СТАТУСЫ -->
+  <section class="section" id="s-status">
+    <h2 class="section-title">
+      <span class="s-icon">🔄</span> статусы обращения
+    </h2>
+    <p class="section-desc">статус отражает этап жизненного цикла обращения. менять статус может оператор, создавший его.</p>
+
+    <div class="card">
+      <div class="card-title">все статусы</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>статус</th><th>значение</th><th>особенности</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge blue">новый</span></td>
+              <td>обращение только что создано</td>
+              <td>стартовый статус</td>
+            </tr>
+            <tr>
+              <td><span class="badge yellow">в работе</span></td>
+              <td>оператор ведёт переговоры</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><span class="badge green">оплачено</span></td>
+              <td>клиент оплатил сеанс</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><span class="badge red">отменён</span></td>
+              <td>клиент отказался</td>
+              <td>бот запросит причину отмены</td>
+            </tr>
+            <tr>
+              <td><span class="badge purple">уход</span></td>
+              <td>клиент ушёл без завершения</td>
+              <td>бот запросит причину ухода</td>
+            </tr>
+            <tr>
+              <td><span class="badge slate">на удержании</span></td>
+              <td>клиент думает, ждёт</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="warn">
+      <span>⚠️</span>
+      <span>при выборе статусов «отменён» и «уход» бот обязательно спросит причину. введите её текстом — это важно для отчётности.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 7. РЕЗУЛЬТАТ -->
+  <section class="section" id="s-result">
+    <h2 class="section-title">
+      <span class="s-icon">🎯</span> результат обращения
+    </h2>
+    <p class="section-desc">результат — итоговая категоризация обращения. указывается дополнительно к статусу в любой момент.</p>
+
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>результат</th><th>когда применяется</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge green">позитивный лид</span></td>
+              <td>клиент заинтересован, есть высокая вероятность записи</td>
+            </tr>
+            <tr>
+              <td><span class="badge blue">бронь</span></td>
+              <td>клиент официально забронировал сеанс</td>
+            </tr>
+            <tr>
+              <td><span class="badge slate">общий лид</span></td>
+              <td>первичный контакт, интерес не подтверждён</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">💡</span>
+      <span>чтобы указать результат, откройте карточку обращения и нажмите <span class="btn-chip purple">🎯 указать результат</span>.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 8. ОПЛАТА -->
+  <section class="section" id="s-payment">
+    <h2 class="section-title">
+      <span class="s-icon">💳</span> оплата
+    </h2>
+    <p class="section-desc">к одному обращению можно добавить несколько платежей разных типов.</p>
+
+    <div class="pay-grid">
+      <div class="pay-card">
+        <div class="pay-card-title"><span class="badge green">оплата сеанса</span></div>
+        <div class="pay-card-desc">основная оплата за проведённый сеанс.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-card-title"><span class="badge red">оплата за отмену</span></div>
+        <div class="pay-card-desc">штраф или компенсация при отмене брони.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-card-title"><span class="badge yellow">консумация</span></div>
+        <div class="pay-card-desc">оплата услуг или дополнений во время сеанса.</div>
+      </div>
+      <div class="pay-card">
+        <div class="pay-card-title"><span class="badge purple">доп. время</span></div>
+        <div class="pay-card-desc">оплата дополнительного времени. бот дополнительно запросит у Вас количество минут.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-title">процесс добавления оплаты</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">в карточке нажмите <span class="btn-chip green">💳 добавить оплату</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">выберите тип оплаты</div>
+            <div class="step-desc">сеанс / отмена / консумация / доп. время</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">если выбрано «доп. время» — введите количество минут</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">введите сумму</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">5</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">введите комментарий (или пропустите)</div>
+            <div class="step-desc">оплата появится в карточке обращения и в ежедневной выгрузке.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 9. ПОИСК -->
+  <section class="section" id="s-search">
+    <h2 class="section-title">
+      <span class="s-icon">🔍</span> поиск обращений
+    </h2>
+    <p class="section-desc">позволяет найти любое обращение независимо от того, кто его создал.</p>
+
+    <div class="card">
+      <div class="card-title">что искать</div>
+      <ul>
+        <li><strong>по номеру телефона</strong> — введите телефон клиента (полностью или частично)</li>
+        <li><strong>по id обращения</strong> — введите числовой идентификатор, например <strong>42</strong></li>
+      </ul>
+    </div>
+
+    <p style="font-size: 14px; color: var(--text-muted);">результаты показываются списком. нажмите на нужное обращение, чтобы открыть его карточку.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 10. МОИ -->
+  <section class="section" id="s-mine">
+    <h2 class="section-title">
+      <span class="s-icon">📌</span> мои обращения
+    </h2>
+    <p class="section-desc">раздел показывает только те обращения, которые вы создали. удобно для ежедневной работы.</p>
+
+    <div class="card">
+      <p>откройте «📌 мои обращения» в главном меню. бот покажет список всех ваших обращений в хронологическом порядке (последние — первые). нажмите на любое, чтобы открыть карточку.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 11. СПИСКИ -->
+  <section class="section" id="s-clients">
+    <h2 class="section-title">
+      <span class="s-icon">📓</span> списки клиентов
+    </h2>
+    <p class="section-desc">система ведёт три списка клиентов по номеру телефона. при создании обращения статус определяется автоматически.</p>
+
+    <div class="card">
+      <div class="card-title">три списка</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>список</th><th>кто попадает</th><th>приоритет</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge green">зелёный / белый</span></td>
+              <td>проверенные клиенты, с которыми работать можно</td>
+              <td>средний</td>
+            </tr>
+            <tr>
+              <td><span class="badge red">чёрный</span></td>
+              <td>нежелательные клиенты</td>
+              <td>высший — перекрывает белый</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">автоматическое определение статуса</div>
+      <p style="font-size: 14px;">при создании нового обращения система проверяет телефон клиента по спискам:</p>
+      <ul>
+        <li>если телефон в чёрном списке → статус клиента «чёрный список»</li>
+        <li>если телефон в белом списке → статус «белый список»</li>
+        <li>иначе → «новый»</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">ручное добавление в список</div>
+      <p style="font-size: 14px;">откройте «📓 списки клиентов», выберите нужный список и нажмите «➕ добавить». введите номер телефона и, при желании, комментарий.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 12. ОТЧЁТЫ -->
+  <section class="section" id="s-reports">
+    <h2 class="section-title">
+      <span class="s-icon">📊</span> отчёты
+    </h2>
+    <p class="section-desc">раздел показывает сводную статистику за выбранный период. доступен всем операторам.</p>
+
+    <div class="card">
+      <div class="card-title">периоды отчётов</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
+        <span class="btn-chip">сегодня</span>
+        <span class="btn-chip">вчера</span>
+        <span class="btn-chip">эта неделя</span>
+        <span class="btn-chip">этот месяц</span>
+        <span class="btn-chip">за всё время</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">что показывает отчёт</div>
+      <ul>
+        <li>общее число обращений за период</li>
+        <li>распределение по статусам: новые, в работе, оплачены, отменены, уходы, на удержании</li>
+        <li>причины отмены — список с количеством (у супервайзера)</li>
+        <li>причины ухода — список с количеством (у супервайзера)</li>
+        <li>суммы по типам оплат: сеанс, отмена, консумация, доп. время</li>
+        <li>общая сумма поступлений</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 13. АНАЛИТИКА ОПЕРАТОРОВ -->
+  <section class="section" id="s-ops">
+    <h2 class="section-title">
+      <span class="s-icon">📈</span> аналитика операторов <span class="role-sup">sv</span>
+    </h2>
+    <p class="section-desc">сравнительная таблица эффективности каждого оператора за выбранный период.</p>
+
+    <div class="card">
+      <div class="card-title">что отображается по каждому оператору</div>
+      <ul>
+        <li>имя и фамилия оператора</li>
+        <li>количество созданных обращений</li>
+        <li>количество оплаченных, отменённых, ушедших</li>
+        <li>конверсия в оплату</li>
+      </ul>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">ℹ️</span>
+      <span>раздел доступен только пользователям с ролью «супервайзер» и выше.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 14. АНАЛИТИКА ТРАФИКА -->
+  <section class="section" id="s-traffic">
+    <h2 class="section-title">
+      <span class="s-icon">📡</span> аналитика трафика <span class="role-sup">sv</span>
+    </h2>
+    <p class="section-desc">показывает, сколько обращений пришло из каждого источника, и какая конверсия в оплату.</p>
+
+    <div class="card">
+      <div class="card-title">что показывает</div>
+      <ul>
+        <li>список источников трафика</li>
+        <li>количество обращений по каждому источнику</li>
+        <li>количество оплат по источнику</li>
+        <li>конверсия (оплаты / обращения)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 15. ЖУРНАЛ -->
+  <section class="section" id="s-log">
+    <h2 class="section-title">
+      <span class="s-icon">📜</span> журнал действий <span class="role-sup">sv</span>
+    </h2>
+    <p class="section-desc">хронологический лог всех значимых изменений в системе.</p>
+
+    <div class="card">
+      <div class="card-title">что фиксируется</div>
+      <ul>
+        <li>создание нового обращения</li>
+        <li>смена статуса обращения</li>
+        <li>добавление оплаты</li>
+        <li>изменение результата</li>
+        <li>добавление клиентов в списки</li>
+        <li>смена ролей операторов</li>
+        <li>добавление справочников (источники, модели, мастера)</li>
+      </ul>
+    </div>
+
+    <p style="font-size: 14px; color: var(--text-muted);">каждая запись содержит время события, имя оператора и описание действия.</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 16. УПРАВЛЕНИЕ СИСТЕМОЙ -->
+  <section class="section" id="s-admin">
+    <h2 class="section-title">
+      <span class="s-icon">⚙️</span> управление системой <span class="role-sup">sv</span>
+    </h2>
+    <p class="section-desc">справочники и настройки, которые администратор или супервайзер ведут вручную.</p>
+
+    <div class="card">
+      <div class="card-title">список операторов</div>
+      <p style="font-size: 14px;">показывает всех зарегистрированных пользователей: имя, никнейм telegram и текущую роль.</p>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">смена роли оператора</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">нажмите «сменить роль»</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">введите telegram id оператора</div>
+            <div class="step-desc">оператор может найти свой id у <a href="https://t.me/userinfobot" style="color:var(--accent);">@userinfobot</a>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+          <div class="step-content">
+            <div class="step-label">выберите новую роль</div>
+            <div class="step-desc"><span class="btn-chip">оператор</span> или <span class="btn-chip purple">супервайзер</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">персонажи (модели)</div>
+      <p style="font-size: 14px;">откройте «управление → персонажи». здесь отображается список всех моделей. для добавления нажмите <span class="btn-chip">➕ добавить персонажа</span> и введите имя.</p>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">мастера</div>
+      <p style="font-size: 14px;">аналогично. «управление → мастера» → <span class="btn-chip">➕ добавить мастера</span>.</p>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">источники трафика</div>
+      <p style="font-size: 14px;">«управление → источники трафика» → <span class="btn-chip">➕ добавить источник</span>. также источник можно добавить прямо в процессе создания обращения.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 17. ЯЗЫК -->
+  <section class="section" id="s-lang">
+    <h2 class="section-title">
+      <span class="s-icon">🌐</span> язык интерфейса
+    </h2>
+    <p class="section-desc">бот поддерживает два языка интерфейса — русский и английский.</p>
+
+    <div class="card">
+      <p>в главном меню нажмите <span class="btn-chip">🌐 язык</span>. выберите <span class="btn-chip">🇷🇺 русский</span> или <span class="btn-chip">🇬🇧 english</span>. изменение применяется сразу и сохраняется между сессиями.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ 18. ВЫГРУЗКА -->
+  <section class="section" id="s-export">
+    <h2 class="section-title">
+      <span class="s-icon">📤</span> ежедневная excel-выгрузка
+    </h2>
+    <p class="section-desc">каждый день в 10:00 бот автоматически формирует и отправляет в указанный telegram-чат файл excel со всеми обращениями за предыдущий рабочий день.</p>
+
+    <div class="card">
+      <div class="card-title">рабочий день в выгрузке</div>
+      <p style="font-size: 14px;">период: с 10:00 предыдущего дня до 10:00 текущего дня. например, файл за понедельник охватывает промежуток <strong>пн 10:00 → вт 10:00</strong>.</p>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">18 колонок файла</div>
+      <div class="xlsx-list">
+        <div class="xlsx-item"><span class="xlsx-n">01</span> №</div>
+        <div class="xlsx-item"><span class="xlsx-n">02</span> дата</div>
+        <div class="xlsx-item"><span class="xlsx-n">03</span> время</div>
+        <div class="xlsx-item"><span class="xlsx-n">04</span> телефон</div>
+        <div class="xlsx-item"><span class="xlsx-n">05</span> контакт</div>
+        <div class="xlsx-item"><span class="xlsx-n">06</span> модель</div>
+        <div class="xlsx-item"><span class="xlsx-n">07</span> источник</div>
+        <div class="xlsx-item"><span class="xlsx-n">08</span> статус клиента</div>
+        <div class="xlsx-item"><span class="xlsx-n">09</span> мастер</div>
+        <div class="xlsx-item"><span class="xlsx-n">10</span> длительность (мин)</div>
+        <div class="xlsx-item"><span class="xlsx-n">11</span> результат</div>
+        <div class="xlsx-item"><span class="xlsx-n">12</span> комментарий</div>
+        <div class="xlsx-item"><span class="xlsx-n">13</span> оплата за отмену</div>
+        <div class="xlsx-item"><span class="xlsx-n">14</span> оплата сеанса</div>
+        <div class="xlsx-item"><span class="xlsx-n">15</span> консумация</div>
+        <div class="xlsx-item"><span class="xlsx-n">16</span> доп. время (мин)</div>
+        <div class="xlsx-item"><span class="xlsx-n">17</span> оплата за доп. время</div>
+        <div class="xlsx-item"><span class="xlsx-n">18</span> оператор</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card-title">особенности файла</div>
+      <ul>
+        <li>первая строка зафиксирована — при прокрутке заголовки остаются видны</li>
+        <li>встроенная фильтрация по любой колонке (кнопки ▼ в заголовках)</li>
+        <li>чётные строки выделены цветом для удобства чтения</li>
+        <li>если обращений за день нет — бот пришлёт текстовое уведомление</li>
+      </ul>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">⚙️</span>
+      <span>для получения выгрузки администратор должен добавить переменную <strong>EXPORT_CHAT_ID</strong> в настройки сервера — telegram id чата, куда бот будет присылать файл.</span>
+    </div>
+  </section>
+
+  <hr>
+  <p style="font-size: 12.5px; color: var(--text-muted); text-align: center; margin-top: 24px;">
+    если у Вас возникли вопросы — обратитесь к администратору системы.
+  </p>
+</main>
+
+<script>
+  // scroll-spy
+  const navLinks = document.querySelectorAll('nav a.nav-item');
+  const sections = Array.from(navLinks).map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+
+  function onScroll() {
+    let current = null;
+    const scrollY = window.scrollY + 80;
+    sections.forEach(sec => { if (sec.offsetTop <= scrollY) current = sec.id; });
+    navLinks.forEach(l => {
+      const active = l.getAttribute('href') === '#' + current;
+      l.classList.toggle('active', active);
+    });
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
