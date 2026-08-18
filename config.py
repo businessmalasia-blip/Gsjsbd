@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     TIMEZONE: str = "Europe/Moscow"
     EXPORT_CHAT_ID: Optional[int] = None
+    GOOGLE_CREDENTIALS_PATH: Optional[str] = None  # path to service account JSON
+    GOOGLE_SPREADSHEET_ID: Optional[str] = None    # Google Sheets document ID
 
     model_config = {
         "env_file": ".env",

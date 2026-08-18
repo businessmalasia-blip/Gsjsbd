@@ -1,3 +1,4 @@
+import asyncio
 import io
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -15,8 +16,8 @@ from database.crud import get_export_tickets
 from database.models import Ticket
 
 HEADERS = [
-    "№", "Дата", "Время", "Телефон", "Контакт", "Модель",
-    "Источник", "Статус клиента", "Мастер", "Длительность (мин)",
+    "ID", "Дата", "Время", "Телефон", "Дополнительный контакт", "Модель",
+    "Источник", "Статус клиента", "Мастер", "Время сеанса", "Длительность (мин)",
     "Результат", "Комментарий",
     "Оплата за отмену", "Оплата сеанса", "Консумация",
     "Доп. время (мин)", "Оплата за доп. время", "Оператор",
@@ -36,7 +37,6 @@ RESULT_MAP = {
 
 
 def _ticket_row(ticket: Ticket) -> list:
-    # aggregate payments by type
     pay: dict = {"session": Decimal(0), "cancellation": Decimal(0),
                  "service": Decimal(0), "extra_time": Decimal(0)}
     extra_mins = 0
@@ -70,6 +70,7 @@ def _ticket_row(ticket: Ticket) -> list:
         ticket.traffic_source.name if ticket.traffic_source else "",
         client_status,
         ticket.master.name if ticket.master else "",
+        ticket.session_start or "",
         ticket.session_duration or "",
         result,
         comment,
@@ -109,7 +110,7 @@ def generate_excel(tickets: list, date_from: datetime, date_to: datetime) -> byt
             if fill:
                 cell.fill = fill
 
-    col_widths = [6, 11, 7, 16, 20, 14, 12, 14, 14, 12,
+    col_widths = [7, 11, 7, 16, 22, 14, 12, 14, 14, 13, 12,
                   16, 28, 14, 14, 12, 14, 16, 18]
     for i, width in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = width
@@ -120,6 +121,45 @@ def generate_excel(tickets: list, date_from: datetime, date_to: datetime) -> byt
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def _write_to_sheets_sync(tickets: list, date_from: datetime, tab_name: str) -> str:
+    """Sync function — runs in thread executor."""
+    import gspread
+    from google.oauth2.service_account import Credentials
+
+    creds = Credentials.from_service_account_file(
+        settings.GOOGLE_CREDENTIALS_PATH,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"],
+    )
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(settings.GOOGLE_SPREADSHEET_ID)
+
+    try:
+        ws = sh.worksheet(tab_name)
+        ws.clear()
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=tab_name, rows=max(len(tickets) + 5, 20), cols=len(HEADERS))
+
+    # header
+    ws.update([HEADERS], "A1")
+
+    if tickets:
+        rows = [_ticket_row(t) for t in tickets]
+        # stringify all values for Sheets
+        rows_str = [[str(v) if v != "" else "" for v in row] for row in rows]
+        ws.update(rows_str, "A2")
+
+    return sh.url
+
+
+async def export_to_google_sheets(tickets: list, date_from: datetime) -> str:
+    tab_name = date_from.strftime("%d.%m.%Y")
+    loop = asyncio.get_event_loop()
+    url = await loop.run_in_executor(
+        None, _write_to_sheets_sync, tickets, date_from, tab_name
+    )
+    return url
 
 
 async def run_daily_export(bot: Bot) -> None:
@@ -134,6 +174,8 @@ async def run_daily_export(bot: Bot) -> None:
     async with async_session_factory() as session:
         tickets = await get_export_tickets(session, date_from, date_to)
 
+    use_sheets = bool(settings.GOOGLE_CREDENTIALS_PATH and settings.GOOGLE_SPREADSHEET_ID)
+
     if not tickets:
         await bot.send_message(
             settings.EXPORT_CHAT_ID,
@@ -141,15 +183,35 @@ async def run_daily_export(bot: Bot) -> None:
         )
         return
 
-    excel_bytes = generate_excel(tickets, date_from, date_to)
-    filename = f"crm_export_{date_from.strftime('%d%m%Y')}.xlsx"
-    caption = (
-        f"📊 Выгрузка за {date_from.strftime('%d.%m.%Y')} 10:00 — "
-        f"{date_to.strftime('%d.%m.%Y')} 10:00\n"
-        f"Обращений: {len(tickets)}"
+    period_str = (
+        f"{date_from.strftime('%d.%m.%Y')} 10:00 — "
+        f"{date_to.strftime('%d.%m.%Y')} 10:00"
     )
-    await bot.send_document(
-        settings.EXPORT_CHAT_ID,
-        BufferedInputFile(excel_bytes, filename=filename),
-        caption=caption,
-    )
+
+    if use_sheets:
+        try:
+            url = await export_to_google_sheets(tickets, date_from)
+            await bot.send_message(
+                settings.EXPORT_CHAT_ID,
+                f"📊 Выгрузка за {period_str}\n"
+                f"Обращений: {len(tickets)}\n\n"
+                f"📎 <a href=\"{url}\">Открыть Google Таблицу</a>",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            # fallback to Excel if Sheets fails
+            excel_bytes = generate_excel(tickets, date_from, date_to)
+            filename = f"crm_export_{date_from.strftime('%d%m%Y')}.xlsx"
+            await bot.send_document(
+                settings.EXPORT_CHAT_ID,
+                BufferedInputFile(excel_bytes, filename=filename),
+                caption=f"📊 Выгрузка за {period_str}\nОбращений: {len(tickets)}\n⚠️ Google Sheets недоступен: {e}",
+            )
+    else:
+        excel_bytes = generate_excel(tickets, date_from, date_to)
+        filename = f"crm_export_{date_from.strftime('%d%m%Y')}.xlsx"
+        await bot.send_document(
+            settings.EXPORT_CHAT_ID,
+            BufferedInputFile(excel_bytes, filename=filename),
+            caption=f"📊 Выгрузка за {period_str}\nОбращений: {len(tickets)}",
+        )

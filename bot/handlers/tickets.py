@@ -69,6 +69,7 @@ def format_ticket(ticket, lang: str) -> str:
     client_status_key = CLIENT_STATUS_LABELS.get(
         ticket.client_status.value if ticket.client_status else "new", "client_status_new"
     )
+    session_start_str = ticket.session_start or none
     duration_str = f"{ticket.session_duration} {min_abbr}" if ticket.session_duration else none
     result_str = t(RESULT_LABELS.get(
         ticket.result_category.value if ticket.result_category else "", "none"
@@ -83,6 +84,7 @@ def format_ticket(ticket, lang: str) -> str:
         f"{t('ticket_result', lang)}: {result_str}\n"
         f"{t('ticket_model', lang)}: {model_name}\n"
         f"{t('ticket_master', lang)}: {master_name}\n"
+        f"{t('ticket_session_start', lang)}: {session_start_str}\n"
         f"{t('ticket_source', lang)}: {source_name}\n"
         f"{t('ticket_duration', lang)}: {duration_str}\n"
         f"{t('ticket_operator', lang)}: {ticket.operator.full_name}\n"
@@ -229,10 +231,10 @@ async def process_master_selection(
         await state.update_data(master_id=int(data))
 
     await callback.message.edit_text(
-        t("enter_session_duration", lang),
+        t("enter_session_start", lang),
         reply_markup=cancel_kb(lang),
     )
-    await state.set_state(TicketForm.session_duration)
+    await state.set_state(TicketForm.session_start)
     await callback.answer()
 
 
@@ -242,6 +244,14 @@ async def process_new_master(
 ):
     m = await get_or_create_master(session, message.text.strip())
     await state.update_data(master_id=m.id)
+    await message.answer(t("enter_session_start", lang), reply_markup=cancel_kb(lang))
+    await state.set_state(TicketForm.session_start)
+
+
+@router.message(TicketForm.session_start)
+async def process_session_start(message: Message, state: FSMContext, lang: str):
+    text = message.text.strip()
+    await state.update_data(session_start=None if text == "/skip" else text)
     await message.answer(t("enter_session_duration", lang), reply_markup=cancel_kb(lang))
     await state.set_state(TicketForm.session_duration)
 
@@ -296,6 +306,7 @@ async def confirm_ticket_creation(
         description=data.get("description"),
         model_id=data.get("model_id"),
         master_id=data.get("master_id"),
+        session_start=data.get("session_start"),
         session_duration=data.get("session_duration"),
     )
     await state.clear()

@@ -189,6 +189,7 @@ async def create_ticket(
     client_name: Optional[str] = None,
     model_id: Optional[int] = None,
     master_id: Optional[int] = None,
+    session_start: Optional[str] = None,
     session_duration: Optional[int] = None,
 ) -> Ticket:
     client_status = await _detect_client_status(session, client_phone, client_contact)
@@ -202,6 +203,7 @@ async def create_ticket(
         description=description,
         model_id=model_id,
         master_id=master_id,
+        session_start=session_start,
         session_duration=session_duration,
         status=TicketStatus.NEW,
     )

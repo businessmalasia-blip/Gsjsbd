@@ -11,6 +11,7 @@ class TicketForm(StatesGroup):
     traffic_source = State()
     model_id = State()
     master_id = State()
+    session_start = State()
     session_duration = State()
     description = State()
     confirm = State()

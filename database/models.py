@@ -147,6 +147,7 @@ class Ticket(Base):
     model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("models.id"))
     master_id: Mapped[Optional[int]] = mapped_column(ForeignKey("masters.id"))
 
+    session_start: Mapped[Optional[str]] = mapped_column(String(30))   # e.g. "12:00-13:00"
     session_duration: Mapped[Optional[int]] = mapped_column(Integer)  # minutes
 
     description: Mapped[Optional[str]] = mapped_column(Text)
