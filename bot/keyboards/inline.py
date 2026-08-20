@@ -126,6 +126,16 @@ def confirm_kb(prefix: str, lang: str = "ru") -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def session_format_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🏠 Incall", callback_data="sformat:incall")
+    builder.button(text="🚗 Outcall", callback_data="sformat:outcall")
+    builder.button(text=t("skip_model", lang), callback_data="sformat:skip")
+    builder.button(text=t("cancel", lang), callback_data="menu:main")
+    builder.adjust(2, 1, 1)
+    return builder.as_markup()
+
+
 def cancel_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=t("cancel", lang), callback_data="menu:main")

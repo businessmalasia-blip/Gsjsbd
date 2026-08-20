@@ -12,7 +12,9 @@ class TicketForm(StatesGroup):
     model_id = State()
     master_id = State()
     session_start = State()
+    session_format = State()
     session_duration = State()
+    price = State()
     description = State()
     confirm = State()
 

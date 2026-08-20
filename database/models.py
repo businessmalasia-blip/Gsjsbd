@@ -148,7 +148,9 @@ class Ticket(Base):
     master_id: Mapped[Optional[int]] = mapped_column(ForeignKey("masters.id"))
 
     session_start: Mapped[Optional[str]] = mapped_column(String(30))   # e.g. "12:00-13:00"
+    session_format: Mapped[Optional[str]] = mapped_column(String(20))  # "incall" | "outcall"
     session_duration: Mapped[Optional[int]] = mapped_column(Integer)  # minutes
+    price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))  # expected payment
 
     description: Mapped[Optional[str]] = mapped_column(Text)
     amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))

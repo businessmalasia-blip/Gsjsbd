@@ -9,7 +9,7 @@ from bot.i18n import t, status_label
 from bot.keyboards.inline import (
     ticket_status_kb, traffic_sources_kb, confirm_kb, cancel_kb,
     list_type_kb, back_to_menu_kb, models_kb, masters_kb,
-    payment_type_kb, result_category_kb
+    payment_type_kb, result_category_kb, session_format_kb
 )
 from bot.states.forms import TicketForm, StatusChangeForm, PaymentForm, SearchForm
 from database.crud import (
@@ -70,7 +70,10 @@ def format_ticket(ticket, lang: str) -> str:
         ticket.client_status.value if ticket.client_status else "new", "client_status_new"
     )
     session_start_str = ticket.session_start or none
+    fmt_map = {"incall": "🏠 Incall", "outcall": "🚗 Outcall"}
+    session_format_str = fmt_map.get(ticket.session_format or "", none)
     duration_str = f"{ticket.session_duration} {min_abbr}" if ticket.session_duration else none
+    price_str = f"{ticket.price} USDT" if ticket.price is not None else none
     result_str = t(RESULT_LABELS.get(
         ticket.result_category.value if ticket.result_category else "", "none"
     ), lang) if ticket.result_category else none
@@ -85,6 +88,8 @@ def format_ticket(ticket, lang: str) -> str:
         f"{t('ticket_model', lang)}: {model_name}\n"
         f"{t('ticket_master', lang)}: {master_name}\n"
         f"{t('ticket_session_start', lang)}: {session_start_str}\n"
+        f"{t('ticket_session_format', lang)}: {session_format_str}\n"
+        f"{t('ticket_price', lang)}: {price_str}\n"
         f"{t('ticket_source', lang)}: {source_name}\n"
         f"{t('ticket_duration', lang)}: {duration_str}\n"
         f"{t('ticket_operator', lang)}: {ticket.operator.full_name}\n"
@@ -252,8 +257,17 @@ async def process_new_master(
 async def process_session_start(message: Message, state: FSMContext, lang: str):
     text = message.text.strip()
     await state.update_data(session_start=None if text == "/skip" else text)
-    await message.answer(t("enter_session_duration", lang), reply_markup=cancel_kb(lang))
+    await message.answer(t("choose_session_format", lang), reply_markup=session_format_kb(lang))
+    await state.set_state(TicketForm.session_format)
+
+
+@router.callback_query(F.data.startswith("sformat:"), TicketForm.session_format)
+async def process_session_format(callback: CallbackQuery, state: FSMContext, lang: str):
+    val = callback.data.split(":")[1]
+    await state.update_data(session_format=None if val == "skip" else val)
+    await callback.message.edit_text(t("enter_session_duration", lang), reply_markup=cancel_kb(lang))
     await state.set_state(TicketForm.session_duration)
+    await callback.answer()
 
 
 @router.message(TicketForm.session_duration)
@@ -269,6 +283,25 @@ async def process_session_duration(message: Message, state: FSMContext, lang: st
             await state.update_data(session_duration=mins)
         except ValueError:
             await message.answer(t("invalid_duration", lang))
+            return
+    await message.answer(t("enter_price", lang), reply_markup=cancel_kb(lang))
+    await state.set_state(TicketForm.price)
+
+
+@router.message(TicketForm.price)
+async def process_price(message: Message, state: FSMContext, lang: str):
+    text = message.text.strip()
+    if text == "/skip":
+        await state.update_data(price=None)
+    else:
+        try:
+            from decimal import Decimal, InvalidOperation
+            val = Decimal(text.replace(",", "."))
+            if val < 0:
+                raise ValueError
+            await state.update_data(price=val)
+        except (InvalidOperation, ValueError):
+            await message.answer(t("invalid_price", lang))
             return
     await message.answer(t("enter_description", lang), reply_markup=cancel_kb(lang))
     await state.set_state(TicketForm.description)
@@ -307,7 +340,9 @@ async def confirm_ticket_creation(
         model_id=data.get("model_id"),
         master_id=data.get("master_id"),
         session_start=data.get("session_start"),
+        session_format=data.get("session_format"),
         session_duration=data.get("session_duration"),
+        price=data.get("price"),
     )
     await state.clear()
     await callback.message.edit_text(
