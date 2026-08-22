@@ -58,7 +58,7 @@ async def main():
     scheduler = AsyncIOScheduler(timezone=tz)
     scheduler.add_job(
         run_daily_export,
-        CronTrigger(hour=11, minute=39, timezone=tz),
+        CronTrigger(hour=settings.EXPORT_HOUR, minute=settings.EXPORT_MINUTE, timezone=tz),
         args=[bot],
         id="daily_export",
         replace_existing=True,

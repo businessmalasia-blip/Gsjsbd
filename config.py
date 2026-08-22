@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     TIMEZONE: str = "Europe/Moscow"
     EXPORT_CHAT_ID: Optional[int] = None
+    EXPORT_HOUR: int = 11
+    EXPORT_MINUTE: int = 39
     GOOGLE_CREDENTIALS_PATH: Optional[str] = None  # path to service account JSON
     GOOGLE_SPREADSHEET_ID: Optional[str] = None    # Google Sheets document ID
 
