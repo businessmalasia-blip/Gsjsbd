@@ -168,7 +168,7 @@ async def run_daily_export(bot: Bot) -> None:
 
     tz = pytz.timezone(settings.TIMEZONE)
     now = datetime.now(tz)
-    date_to = now.replace(hour=10, minute=0, second=0, microsecond=0)
+    date_to = now.replace(hour=0, minute=0, second=0, microsecond=0)
     date_from = date_to - timedelta(days=1)
 
     async with async_session_factory() as session:
@@ -183,10 +183,7 @@ async def run_daily_export(bot: Bot) -> None:
         )
         return
 
-    period_str = (
-        f"{date_from.strftime('%d.%m.%Y')} 10:00 — "
-        f"{date_to.strftime('%d.%m.%Y')} 10:00"
-    )
+    period_str = date_from.strftime("%d.%m.%Y")
 
     if use_sheets:
         try:
