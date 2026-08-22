@@ -278,7 +278,7 @@ async def process_session_duration(message: Message, state: FSMContext, lang: st
     else:
         try:
             mins = int(text)
-            if mins <= 0:
+            if mins <= 0 or mins > 9999:
                 raise ValueError
             await state.update_data(session_duration=mins)
         except ValueError:
