@@ -168,8 +168,8 @@ async def run_daily_export(bot: Bot) -> None:
 
     tz = pytz.timezone(settings.TIMEZONE)
     now = datetime.now(tz)
-    date_to = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    date_from = date_to - timedelta(days=1)
+    date_from = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    date_to = now
 
     async with async_session_factory() as session:
         tickets = await get_export_tickets(session, date_from, date_to)
